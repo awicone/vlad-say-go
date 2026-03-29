@@ -134,6 +134,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .sound-toggle{position:fixed;top:2rem;left:2rem;z-index:20;background:rgba(6,6,8,0.5);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;font-size:0.9rem}
 .sound-toggle:hover{border-color:var(--ember-dim);background:var(--ember-glow)}
 
+.sound-tooltip{position:fixed;top:2rem;left:calc(2rem + 46px);z-index:20;background:rgba(6,6,8,0.7);backdrop-filter:blur(12px);border:1px solid var(--ember-dim);border-radius:6px;padding:0.55rem 1rem;display:flex;align-items:center;gap:0.5rem;opacity:0;transform:translateX(-8px);pointer-events:none;transition:opacity 0.5s ease,transform 0.5s ease;white-space:nowrap}
+.sound-tooltip.show{opacity:1;transform:translateX(0);pointer-events:auto}
+.sound-tooltip::before{content:'';position:absolute;left:-6px;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:var(--ember-dim);border-left:0}
+.sound-tooltip-text{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.08em;color:var(--ember);line-height:1.4}
+.sound-tooltip-close{background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;padding:0 0 0 0.3rem;line-height:1;transition:color 0.2s}
+.sound-tooltip-close:hover{color:var(--text)}
+@keyframes tooltipPulse{0%,100%{border-color:var(--ember-dim)}50%{border-color:var(--ember)}}
+
 /* Now playing widget */
 .now-playing{position:fixed;bottom:6rem;right:2rem;z-index:15;display:flex;align-items:center;gap:0.8rem;background:rgba(6,6,8,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:0.5rem;opacity:0;transform:translateX(20px);transition:opacity 0.6s ease,transform 0.6s ease;pointer-events:none}
 .now-playing.show{opacity:1;transform:translateX(0);pointer-events:auto}
@@ -149,6 +157,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .now-playing-bars span:nth-child(4){animation-delay:0.1s;height:90%}
 @keyframes eqBar{0%{height:20%}100%{height:100%}}
 
+/* Loader */
+.loader-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.8s ease}
+.loader-screen.hide{opacity:0;pointer-events:none}
+.loader-title{font-family:var(--serif);font-size:clamp(1.4rem,4vw,2.2rem);font-weight:600;color:var(--text);margin-bottom:0.4rem;opacity:0;animation:introFade 0.8s 0.2s forwards}
+.loader-sub{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.4em;text-transform:uppercase;color:var(--muted);margin-bottom:2.5rem;opacity:0;animation:introFade 0.8s 0.5s forwards}
+.loader-bar-wrap{width:200px;height:2px;background:rgba(255,255,255,0.06);border-radius:1px;overflow:hidden;opacity:0;animation:introFade 0.8s 0.7s forwards}
+.loader-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--ember-dim),var(--ember));transition:width 0.3s ease}
+.loader-pct{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.2em;color:var(--ember-dim);margin-top:1rem;opacity:0;animation:introFade 0.8s 0.7s forwards}
+
 @media(max-width:600px){
   .intro-stats{gap:1.5rem}.slide-inner{padding-bottom:7rem}
   .finale-choices,.interactive-opts{max-width:100%}
@@ -158,10 +175,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 </head>
 <body>
 
+<div class="loader-screen" id="loader">
+  <div class="loader-title">Загружаем путешествие</div>
+  <div class="loader-sub">Бали → Джакарта → Бали</div>
+  <div class="loader-bar-wrap"><div class="loader-bar-fill" id="loaderBar"></div></div>
+  <div class="loader-pct" id="loaderPct">0%</div>
+</div>
+
 <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
 <div class="counter"><span class="current" id="counterCurrent">01</span> / <span id="counterTotal">16</span></div>
 <div class="particles" id="particles"></div>
 <button class="sound-toggle" id="soundToggle" onclick="toggleSound()">🔇</button>
+<div class="sound-tooltip" id="soundTooltip">
+  <span class="sound-tooltip-text">Включи звук для полного<br>погружения в путешествие</span>
+  <button class="sound-tooltip-close" onclick="dismissTooltip()">×</button>
+</div>
 
 <!-- ═══════════ SLIDE 0: INTRO ═══════════ -->
 <div class="slide active" data-index="0" data-sound="boat-horn">
@@ -531,7 +559,14 @@ function playSound(type){
   }
 }
 
+function dismissTooltip(){
+  const tt=document.getElementById('soundTooltip');
+  tt.classList.remove('show');
+  tt.style.animation='';
+}
+
 function toggleSound(){
+  dismissTooltip();
   if(!audioCtx)initAudio();
   soundOn=!soundOn;
   document.getElementById('soundToggle').textContent=soundOn?'🔊':'🔇';
@@ -582,7 +617,7 @@ function updateUI(){
   if(soundOn)playSound(slides[current].dataset.sound);
 }
 
-function nextSlide(){if(current<total-1){current++;updateUI()}}
+function nextSlide(){if(current<total-1){current++;updateUI();if(current===1)dismissTooltip()}}
 
 let touchStartY=0;
 document.addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY});
@@ -619,8 +654,68 @@ for(let i=0;i<20;i++){
   particlesEl.appendChild(p);
 }
 
-setTimeout(()=>ctaWrap.classList.add('visible'),2000);
 document.getElementById('counterTotal').textContent=String(total).padStart(2,'0');
+
+// ── PRELOADER ──
+(function preload(){
+  const loaderBar=document.getElementById('loaderBar');
+  const loaderPct=document.getElementById('loaderPct');
+  const loaderScreen=document.getElementById('loader');
+
+  const images=[
+    'images/01-ferry.jpg','images/02-rice-roads.jpg','images/03-bromo-sunrise.jpg',
+    'images/04-sea-of-sand.jpg','images/05-borobudur.jpg','images/06-warung.jpg',
+    'images/07-jakarta-sunset.jpg','images/08-monkeys.jpg','images/09-rain.jpg',
+    'images/10-ferry-back.jpg','images/11-jakarta-night.jpg','images/volcano-cover.jpg'
+  ];
+  const sounds=[
+    'sounds/boat-horn.mp3','sounds/motorcycle.mp3','sounds/wind.mp3',
+    'sounds/city.mp3','sounds/rain.mp3','sounds/jungle.mp3','sounds/volcano-track.mp3'
+  ];
+
+  const totalAssets=images.length+sounds.length;
+  let loaded=0;
+
+  function tick(){
+    loaded++;
+    const pct=Math.round(loaded/totalAssets*100);
+    loaderBar.style.width=pct+'%';
+    loaderPct.textContent=pct+'%';
+    if(loaded>=totalAssets)finish();
+  }
+
+  function finish(){
+    setTimeout(()=>{
+      loaderScreen.classList.add('hide');
+      setTimeout(()=>{
+        ctaWrap.classList.add('visible');
+        // Show sound tooltip after loader
+        const tt=document.getElementById('soundTooltip');
+        tt.classList.add('show');
+        tt.style.animation='tooltipPulse 2s infinite';
+      },800);
+      setTimeout(()=>loaderScreen.remove(),1000);
+    },400);
+  }
+
+  images.forEach(src=>{
+    const img=new Image();
+    img.onload=tick;
+    img.onerror=tick;
+    img.src=src;
+  });
+
+  sounds.forEach(src=>{
+    const a=new Audio();
+    a.preload='auto';
+    a.oncanplaythrough=function(){this.oncanplaythrough=null;tick()};
+    a.onerror=tick;
+    a.src=src;
+  });
+
+  // Safety timeout — show content after 10s regardless
+  setTimeout(()=>{if(!loaderScreen.classList.contains('hide'))finish()},10000);
+})();
 </script>
 </body>
 </html>
